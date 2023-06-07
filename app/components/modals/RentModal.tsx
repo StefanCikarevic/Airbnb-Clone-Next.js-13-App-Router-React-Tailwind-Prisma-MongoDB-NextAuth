@@ -5,13 +5,16 @@ import Modal from "@/app/components/modals/Modal";
 import Heading from "@/app/components/Heading";
 import { categories } from "@/app/components/navbar/Categories";
 import CategoryBox from "@/app/components/inputs/CategoryInput";
-import { FieldValues, useForm } from "react-hook-form";
+import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 import CountrySelect from "@/app/components/inputs/CountrySelect";
 import Map from "@/app/components/Map";
 import dynamic from "next/dynamic";
 import Counter from "@/app/components/inputs/Counter";
 import ImageUpload from "@/app/components/inputs/ImageUpload";
 import Input from "@/app/components/inputs/Input";
+import axios from "axios";
+import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 enum STEPS {
   CATEGORY = 0,
@@ -23,6 +26,7 @@ enum STEPS {
 }
 
 const RentModal = () => {
+  const router = useRouter();
   const [step, setStep] = useState(STEPS.CATEGORY);
   const [isLoading, setIsLoading] = useState(false);
   const rentModal = useRentModal();
@@ -84,6 +88,28 @@ const RentModal = () => {
 
     return "Next";
   }, [step]);
+
+  const onSubmit: SubmitHandler<FieldValues> = (data) => {
+    if (step !== STEPS.PRICE) {
+      return onNext();
+    }
+    setIsLoading(true);
+    axios
+      .post("/api/listings", data)
+      .then(() => {
+        toast.success("Listing created successfully");
+        router.refresh();
+        reset();
+        setStep(STEPS.CATEGORY);
+        rentModal.onClose();
+      })
+      .catch(() => {
+        toast.error("Something went wrong");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
 
   const secondaryActionLabel = useMemo(() => {
     if (step === STEPS.CATEGORY) {
@@ -232,10 +258,9 @@ const RentModal = () => {
       secondaryActionLabel={secondaryActionLabel}
       secondaryAction={step === STEPS.CATEGORY ? undefined : onBack}
       onClose={rentModal.onClose}
-      onSubmit={onNext}
+      onSubmit={handleSubmit(onSubmit)}
       body={bodyContent}
     ></Modal>
   );
 };
-
 export default RentModal;
